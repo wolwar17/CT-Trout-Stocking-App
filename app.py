@@ -29,21 +29,21 @@ def download_and_parse_pdf(url):
             df = pd.DataFrame(all_rows)
             df = df.dropna(how='all')
             
-            # 1. Keep only the first 3 columns and name them
+            # 1. Keep only first 3 columns
             df = df.iloc[:, :3]
             df.columns = ["Water Body", "Town", "Stocked"]
             
-            # 2. Filter out the header row if it repeats on PDF pages
+            # 2. Filter out header rows
             df = df[df["Water Body"] != "Water Body"]
             
             # 3. Handle multiple dates (e.g., "3/18, 4/7")
-            # This looks at the 'Stocked' cell, splits by comma, and takes the LAST item
+            # Grabs the LAST date string after the comma
             df['Sort_Date_String'] = df['Stocked'].str.split(',').str[-1].str.strip()
             
-            # 4. Convert that string to a real date object for sorting
+            # 4. Convert to real date for sorting
             df['Stocked_Date'] = pd.to_datetime(df['Sort_Date_String'], errors='coerce')
             
-            # 5. MULTI-SORT: Sort Towns A-Z, then Dates Newest to Oldest within the town
+            # 5. MULTI-SORT: Towns A-Z, then Dates Newest to Oldest
             df = df.sort_values(
                 by=['Town', 'Stocked_Date'], 
                 ascending=[True, False]
@@ -57,14 +57,12 @@ def download_and_parse_pdf(url):
 
 # --- MAIN APP FLOW ---
 
-# Download the data
 df = download_and_parse_pdf(PDF_URL)
 
-# User search input
-search_term = st.text_input("Search by Town or Body of Water (e.g., Wolcott or Scoville)")
+# .strip() handles the "Middletown " (with a space) problem
+search_term = st.text_input("Search by Town or Body of Water (e.g., Wolcott or Southbury)").strip()
 
 if df is not None:
-    # Final cleanup of the display columns
     display_df = df[["Water Body", "Town", "Stocked"]]
 
     if search_term:
@@ -73,19 +71,18 @@ if df is not None:
         results = display_df[mask]
         
         if not results.empty:
-            st.success(f"Showing {len(results)} matches for '{search_term}' (Newest first)")
+            st.success(f"Showing {len(results)} matches for '{search_term}'")
             st.dataframe(results, use_container_width=True, hide_index=True)
         else:
-            st.info(f"No results found for '{search_term}'.")
+            st.info(f"No results found for '{search_term}'. (Try checking your spelling!)")
     else:
-        # Default view: Show the top 20 most recent stockings in the state
         st.subheader("🗓️ 20 Most Recent Stockings in CT")
-        # Since we have a multi-sort active, we temporarily re-sort by just date for the "Top 20"
+        # Ensure we show absolute newest first when no search is present
         recent_20 = df.sort_values(by='Stocked_Date', ascending=False).head(20)
         st.dataframe(recent_20[["Water Body", "Town", "Stocked"]], use_container_width=True, hide_index=True)
 
 else:
-    st.error("The app couldn't retrieve the report. The DEEP link might have changed.")
+    st.error("The app couldn't retrieve the report.")
 
 st.divider()
-st.caption("Data provided by CT DEEP. Reports are updated frequently.")
+st.caption("Tip: This app ignores accidental spaces at the end of your search!")
