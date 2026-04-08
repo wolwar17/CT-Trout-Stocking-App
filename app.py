@@ -61,7 +61,7 @@ def download_and_parse_pdf(url):
 df = download_and_parse_pdf(PDF_URL)
 
 # User search input
-search_term = st.text_input("Search by Town or Body of Water (e.g., Wolcott, Southbury, or Scoville)")
+search_term = st.text_input("Search by Town or Body of Water (e.g., Wolcott or Scoville)")
 
 if df is not None:
     # Final cleanup of the display columns
